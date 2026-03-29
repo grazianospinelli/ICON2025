@@ -1,0 +1,174 @@
+%% ============================================================
+%%  FILTRI PER TIPOLOGIA REGIONE E CATEGORIA
+%% ============================================================
+ 
+%% vino_per_tipologia
+vino_per_tipologia(Tipologia, NomeVino) :-
+    vino(NomeVino, _, Tipologia, _, _, _, _, _, _, _, _).
+ 
+%% vino_per_regione
+vino_per_regione(Regione, NomeVino) :-
+    vino(NomeVino, Regione, _, _, _, _, _, _, _, _, _).
+ 
+%% piatto_per_categoria
+piatto_per_categoria(Categoria, NomePiatto) :-
+    piatto(NomePiatto, Categoria, _, _, _, _, _, _, _, _, _, _).
+
+%% ============================================================
+%%  FILTRI PER TIPO PIATTO E TIPO VINO
+%% ============================================================
+
+%% piatto_grasso(piatto con alta grassezza o untuosita)
+piatto_grasso(Nome) :-
+    piatto(Nome, _, _, Grass, Untu, _, _, _, _, _, _, _),
+    (Grass >= 7 ; Untu >= 7).
+ 
+%% piatto_succulento
+piatto_succulento(Nome) :-
+    piatto(Nome, _, _, _, _, Succ, _, _, _, _, _, _), Succ >= 7.
+ 
+%% piatto_speziato
+piatto_speziato(Nome) :-
+    piatto(Nome, _, _, _, _, _, Spez, _, _, _, _, _), Spez >= 6.
+ 
+%% piatto_dolce(piatto con tendenza dolce o dolcezza significativa)
+piatto_dolce(Nome) :-
+    piatto(Nome, _, TDolce, _, _, _, _, _, _, _, Dolc, _),
+    (TDolce >= 6 ; Dolc >= 6).
+ 
+%% piatto_sapido
+piatto_sapido(Nome) :-
+    piatto(Nome, _, _, _, _, _, _, Sap, _, _, _, _), Sap >= 7.
+ 
+%% piatto_amaro
+piatto_amaro(Nome) :-
+    piatto(Nome, _, _, _, _, _, _, _, TAm, _, _, _), TAm >= 6.
+ 
+%% piatto_acido
+piatto_acido(Nome) :-
+    piatto(Nome, _, _, _, _, _, _, _, _, TAc, _, _), TAc >= 6.
+ 
+%% vino_fresco(vino ad alta acidita)
+vino_fresco(Nome) :-
+    vino(Nome, _, _, _, Acid, _, _, _, _, _, _), Acid >= 7.
+ 
+%% vino_strutturato (vino con alta persistenza e alcolicita)
+vino_strutturato(Nome) :-
+    vino(Nome, _, _, _, _, _, Alc, _, _, _, Pers),
+    Alc >= 7, Pers >= 7.
+ 
+%% vino_tannico
+vino_tannico(Nome) :- vino(Nome, _, _, _, _, _, _, Tann, _, _, _), Tann >= 7.
+ 
+%% vino_morbido
+vino_morbido(Nome) :-
+    vino(Nome, _, _, _, _, _, _, _, Morb, _, _), Morb >= 7.
+ 
+%% vino_dolce
+vino_dolce(Nome) :-
+    vino(Nome, _, _, _, _, _, _, _, _, Dolc, _), Dolc >= 6.
+ 
+%% vino_effervescente
+vino_effervescente(Nome) :-
+    vino(Nome, _, _, Efferv, _, _, _, _, _, _, _), Efferv >= 6.
+
+%% ============================================================
+%%  REGOLE ABBINAMENTO PER CONTRAPPOSIZIONE
+%% ============================================================
+
+% Predicato per calcolare punteggio CONTRAPPOSIZIONE (alto = buono)
+contrapposizione(Cibo, Vino, Punteggio) :-
+    piatto(Cibo, _, TdolcC, GrC, UntC, SuccC, _, SapC, TamarC, TacidC, _, _),
+    vino(Vino, _, _, EffV, AcV, SapV, AlcoV, TannV, MorbV, _, _),
+    
+    % Contrapposizioni principali (durezza cibo vs morbidezza vino)
+    ContrapDurezza is (10 - abs(MorbV - (SapC + TamarC + TacidC)/3 )),
+    
+    % Grassezza vs sapidita + effervescenza
+    ContrapGrassezza is (10 - abs((SapV+EffV)/2 - GrC)),
+
+    % Tendenza dolce vs acidità
+    ContrapTendenzaDolce is (10 - abs(AcV - TdolcC)),
+    
+    % Untuosita vs tannini
+    ContrapUntuosita is (10 - abs(TannV - UntC)),
+    
+    % Succulenza vs alcol
+    ContrapSucculenza is (10 - abs(AlcoV - SuccC)),
+    
+    Punteggio is ContrapDurezza + ContrapGrassezza + ContrapUntuosita + ContrapSucculenza + ContrapTendenzaDolce.
+
+%% ============================================================
+%%  REGOLE ABBINAMENTO PER CONCORDANZA
+%% ============================================================
+
+% Predicato per calcolare punteggio CONCORDANZA (alto = buono)
+concordanza(Cibo, Vino, Punteggio) :-
+    piatto(Cibo, _, _, GrC, _, _, SpezC, SapC, _, _, DolceC, PersC),
+    vino(Vino, _, _, _, _, SapV, AlcoV, TannV, MorbV, DolceV, PersV),
+        
+    % Dolcezza cibo vs dolcezza vino
+    ( (DolceV + DolceC) >= 14
+        -> ConcDolcezza is DolceV + DolceC
+        ;  ConcDolcezza is (10 - abs(DolceV - DolceC))
+    ),
+            
+    % Speziatura cibo vs intensita vino    
+    ConcSpez is (10 - abs((AlcoV + TannV + MorbV + PersV) / 4 - SpezC)),
+    
+    % Persistenza cibo vs Persistenza vino (PAI=Persistestanza Aromatica Intensa)    
+    ( (PersV + PersC) >= 14
+        -> ConcPers is PersV + PersC
+        ;  ConcPers is (10 - abs(PersV - PersC))
+    ),
+    
+    % Struttura cibo vs corpo vino
+    ConcStruttura is (10 - abs((AlcoV+MorbV+TannV+PersV+SapV)/5 - (SapC+SpezC+PersC+GrC+DolceC)/5)),    
+    
+    Punteggio is ConcDolcezza + ConcSpez + ConcPers + ConcStruttura.
+
+%% ============================================================
+%%  DIFFERENZA STRUTTURA CIBO/VINO
+%% ============================================================
+
+diff_struttura(Cibo, Vino, Punteggio) :-
+    piatto(Cibo, _, TdolcC, GrC, UntC, SuccC, SpezC, SapC, TamarC, TacidC, DolceC, PersC),
+    vino(Vino, _, _, EffV, AcV, SapV, AlcoV, TannV, MorbV, DolceV, PersV),
+    Struttura_Cibo is TdolcC + GrC + UntC + SuccC + SpezC + SapC + TamarC + TacidC + DolceC + PersC,
+    Struttura_Vino is EffV + AcV + SapV + AlcoV + TannV + MorbV + DolceV + PersV,
+    Punteggio is abs(Struttura_Cibo - Struttura_Vino).
+
+%% ============================================================
+%%  CLASSIFICAZIONE ABBINAMENTO
+%% ============================================================
+ 
+%% grado_abbinamento(Punteggio, Grado)
+grado_abbinamento(P, 'eccellente')  :- P >= 38.
+grado_abbinamento(P, 'buono')       :- P >= 34, P < 38.
+grado_abbinamento(P, 'accettabile') :- P >= 30, P < 34.
+grado_abbinamento(P, 'sconsigliato'):- P < 30.
+
+%% ============================================================
+%%  VALUTAZIONE COMPLESSIVA
+%% ============================================================
+
+% Valutazione complessiva (media 50% contrap, 50% concor) - Diff_Armonia
+valutazione_dettagliata(Cibo, Vino, Contrap, Conc, Diff_Armon, Totale, Grado) :-
+    contrapposizione(Cibo, Vino, Contrap),
+    concordanza(Cibo, Vino, Conc),
+    diff_struttura(Cibo, Vino, Diff_Armon),
+    Totale is round(((Contrap + Conc) / 2) - Diff_Armon),
+    grado_abbinamento(Totale, Grado).
+
+valutazione(Cibo, Vino, Grado) :-
+    valutazione_dettagliata(Cibo, Vino, _, _, _, _, Grado).
+
+%% ============================================================
+%%  ESEMPI QUERY
+%% ============================================================
+
+% ?- vino_per_regione('Piemonte', NomeVino).
+% ?- piatto_per_categoria('Contorno', Piatto).
+% ?- vino_dolce(Nome).
+% ?- valutazione_dettagliata('Parmigiano Reggiano', 'Chianti Classico DOCG', Contrapposizione, Concordanza, Armonia, Totale, Grado_Abbinamento).
+% ?- valutazione('Parmigiano Reggiano', 'Chianti Classico DOCG', Grado_Abbinamento).
