@@ -270,9 +270,9 @@ print("Miglior punteggio CV:", grid_search.best_score_)
 params=grid_search.best_params_
 
 ################################################################################
-# RANDOM RESTART CYCLE del modello Gradient Boost Regressor 
-# con i migliori parametri selezionati, partendo da punti diversi 
-# del training set modificando il parametro seed e usando il parametro
+# SIMIL RANDOM RESTART CYCLE del modello Gradient Boost Regressor 
+# con i migliori parametri selezionati, partendo da stati diversi 
+# dell'algoritmo modificando il parametro seed e usando il parametro
 # subsample=0.8 che se minore di 1 attiva Stochastic Gradient Boosting
 
 # Liste per risultati
@@ -285,7 +285,7 @@ print("Eseguo 30 fit/predict con diversi random_state...")
 
 # Ciclo 30 fit
 for seed in seeds:
-    # Nuovo modello per ogni seed
+    # Nuovo stato per ogni seed
     bestgb_model = GradientBoostingRegressor(
         random_state=seed,
         subsample=0.8,
